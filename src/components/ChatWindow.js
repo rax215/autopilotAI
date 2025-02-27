@@ -495,21 +495,7 @@ const ChatWindow = () => {
             }}
           />
 
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={browserInitialized ? closeBrowser : initializeBrowser}
-            sx={{ 
-              backgroundColor: browserInitialized ? colors.error : colors.success,
-              fontFamily: "'Poppins', sans-serif",
-              fontWeight: 500,
-              '&:hover': {
-                backgroundColor: browserInitialized ? '#d32f2f' : '#388e3c',
-              },
-            }}
-          >
-            {browserInitialized ? 'Close Browser' : 'Initialize Browser'}
-          </Button>
+          
         </Box>
       </Drawer>
 
