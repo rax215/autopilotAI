@@ -51,6 +51,7 @@ const ChatWindow = () => {
   const [apiKey, setApiKey] = useState('');
   const [runningCode, setRunningCode] = useState(null);
   const [browserInitialized, setBrowserInitialized] = useState(false);
+  const [copyStatus, setCopyStatus] = useState({});
   const codeRunnerRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -195,12 +196,15 @@ const ChatWindow = () => {
     }
   };
 
-  const copyToClipboard = async (content) => {
+  const copyToClipboard = async (content, messageId) => {
     try {
       await navigator.clipboard.writeText(content);
-      alert('Copied to clipboard!');
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
+      setCopyStatus({ ...copyStatus, [messageId]: true });
+      setTimeout(() => {
+        setCopyStatus(prev => ({ ...prev, [messageId]: false }));
+      }, 5000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
     }
   };
 
@@ -622,7 +626,7 @@ const ChatWindow = () => {
                           <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
                             <Button
                               size="small"
-                              onClick={() => copyToClipboard(message.content)}
+                              onClick={() => copyToClipboard(message.content, index)}
                               startIcon={<ContentCopyIcon />}
                               sx={{ 
                                 color: colors.primary,
@@ -634,7 +638,7 @@ const ChatWindow = () => {
                                 fontFamily: "'Roboto', sans-serif",
                               }}
                             >
-                              Copy
+                              {copyStatus[index] ? 'Copied!' : 'Copy'}
                             </Button>
                             <Button
                               size="small"
