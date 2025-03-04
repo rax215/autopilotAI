@@ -62,6 +62,18 @@ const ChatWindow = () => {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    if (isLoading) {
+      const loadingMessage = {
+        type: 'system',
+        content: 'Processing your request...',
+        timestamp: new Date().toISOString(),
+        isLoading: true
+      };
+      setMessages(prev => [...prev, loadingMessage]);
+    }
+  }, [isLoading]);
+
   const initializeBrowser = async () => {
     if (!apiKey.trim()) {
       alert('API key is required');
@@ -127,6 +139,7 @@ const ChatWindow = () => {
     //console.log(llmProvider, selectedModel, apiKey, selectedBrowser, selectedScript, input)
 
     try {
+      setMessages(prev => prev.filter(msg => !msg.isLoading));
       const response = await axios.post('http://localhost:5000/api/data', {
         llmProvider,
         model: selectedModel,
@@ -303,6 +316,33 @@ const ChatWindow = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <style>
+        {`
+          .loading-dots {
+            display: inline-flex;
+            align-items: center;
+          }
+          .loading-dots:after {
+            content: '.';
+            width: 1em;
+            animation: dots 1.5s steps(4, end) infinite;
+          }
+          @keyframes dots {
+            0%, 20% {
+              content: '.';
+            }
+            40% {
+              content: '..';
+            }
+            60% {
+              content: '...';
+            }
+            80%, 100% {
+              content: '';
+            }
+          }
+        `}
+      </style>
       {/* Header */}
       <AppBar position="fixed" sx={{ 
         zIndex: (theme) => theme.zIndex.drawer + 1,
@@ -527,50 +567,57 @@ const ChatWindow = () => {
           <List>
             {messages.map((message, index) => (
               <React.Fragment key={index}>
-                <ListItem>
-                  <ListItemText
-                    primary={
-                      <Typography
-                        variant="body1"
-                        sx={{
-                          fontFamily: "'Poppins', sans-serif",
-                          fontWeight: 600,
-                          color: message.type === 'user' 
-                            ? colors.primary 
-                            : message.type === 'error' 
-                            ? colors.error 
-                            : colors.secondary,
-                          fontSize: '1rem',
-                          mb: 1,
-                        }}
-                      >
-                        {message.type.toUpperCase()}
+                <ListItem
+                  sx={{
+                    flexDirection: 'column',
+                    alignItems: message.type === 'user' ? 'flex-end' : 'flex-start',
+                    bgcolor: message.type === 'user' ? colors.userMessage :
+                            message.type === 'bot' ? colors.botMessage :
+                            message.type === 'system' ? 'rgba(0, 0, 0, 0.04)' :
+                            message.type === 'error' ? '#ffebee' : 'transparent',
+                    borderRadius: 2,
+                    my: 1,
+                    p: 2,
+                    maxWidth: '80%',
+                    alignSelf: message.type === 'user' ? 'flex-end' : 'flex-start',
+                  }}
+                >
+                  <Box sx={{ width: '100%' }}>
+                    {message.isLoading ? (
+                      <Typography sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center',
+                        color: 'text.secondary',
+                        fontStyle: 'italic'
+                      }}>
+                        <span className="loading-dots">Processing your request</span>
                       </Typography>
-                    }
-                    secondary={
-                      <Box>
-                        <Typography
-                          component="pre"
-                          sx={{
-                            whiteSpace: 'pre-wrap',
-                            wordWrap: 'break-word',
-                            fontFamily: message.codeType 
-                              ? "'Roboto Mono', monospace" 
-                              : "'Poppins', sans-serif",
-                            backgroundColor: message.type === 'user' 
-                              ? colors.userMessage 
-                              : colors.botMessage,
-                            padding: '16px',
-                            borderRadius: '8px',
-                            fontSize: message.codeType ? '0.9rem' : '0.95rem',
-                            marginTop: '8px',
-                            lineHeight: '1.6',
-                            letterSpacing: message.codeType ? '0' : '0.3px',
-                            color: '#333333',
-                          }}
-                        >
-                          {message.content}
-                        </Typography>
+                    ) : (
+                      <>
+                        {message.content && (
+                          <Typography
+                            component="pre"
+                            sx={{
+                              whiteSpace: 'pre-wrap',
+                              wordWrap: 'break-word',
+                              fontFamily: message.codeType 
+                                ? "'Roboto Mono', monospace" 
+                                : "'Poppins', sans-serif",
+                              backgroundColor: message.type === 'user' 
+                                ? colors.userMessage 
+                                : colors.botMessage,
+                              padding: '16px',
+                              borderRadius: '8px',
+                              fontSize: message.codeType ? '0.9rem' : '0.95rem',
+                              marginTop: '8px',
+                              lineHeight: '1.6',
+                              letterSpacing: message.codeType ? '0' : '0.3px',
+                              color: '#333333',
+                            }}
+                          >
+                            {message.content}
+                          </Typography>
+                        )}
                         {message.content && (
                           <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
                             <Button
@@ -625,9 +672,9 @@ const ChatWindow = () => {
                             )}
                           </Box>
                         )}
-                      </Box>
-                    }
-                  />
+                      </>
+                    )}
+                  </Box>
                 </ListItem>
                 <Divider sx={{ my: 1 }} />
               </React.Fragment>
