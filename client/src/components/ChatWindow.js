@@ -17,6 +17,8 @@ import {
   AppBar,
   Toolbar,
   Drawer,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import LaunchIcon from '@mui/icons-material/Launch';
@@ -50,7 +52,7 @@ const ChatWindow = () => {
   const [selectedScript, setSelectedScript] = useState('playwright');
   const [apiKey, setApiKey] = useState('');
   const [runningCode, setRunningCode] = useState(null);
-  const [browserInitialized, setBrowserInitialized] = useState(false);
+  const [generatePlaywrightScript, setGeneratePlaywrightScript] = useState(false);
   const [copyStatus, setCopyStatus] = useState({});
   const codeRunnerRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -74,53 +76,6 @@ const ChatWindow = () => {
       setMessages(prev => [...prev, loadingMessage]);
     }
   }, [isLoading]);
-
-  const initializeBrowser = async () => {
-    if (!apiKey.trim()) {
-      alert('API key is required');
-      return;
-    }
-
-    try {
-      const response = await axios.post('http://localhost:5000/browser/initialize', {
-        apiKey,
-        model: selectedModel
-      });
-
-      if (response.data.success) {
-        setBrowserInitialized(true);
-        const message = {
-          type: 'system',
-          content: 'Browser agent initialized successfully',
-          timestamp: new Date().toISOString(),
-        };
-        setMessages(prev => [...prev, message]);
-      }
-    } catch (error) {
-      console.error('Error initializing browser:', error);
-      const errorMessage = {
-        type: 'error',
-        content: error.response?.data?.error || 'Failed to initialize browser',
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    }
-  };
-
-  const closeBrowser = async () => {
-    try {
-      await axios.post('http://localhost:5000/browser/close');
-      setBrowserInitialized(false);
-      const message = {
-        type: 'system',
-        content: 'Browser agent closed',
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, message]);
-    } catch (error) {
-      console.error('Error closing browser:', error);
-    }
-  };
 
   const handleSend = async () => {
     if (!input.trim() || !apiKey.trim()) {
@@ -147,7 +102,8 @@ const ChatWindow = () => {
         apiKey,
         browser: selectedBrowser,
         script: selectedScript,
-        prompt: input
+        prompt: input,
+        generatePlaywrightScript
       });
       console.log(response)
 
@@ -160,7 +116,7 @@ const ChatWindow = () => {
         type: 'bot',
         content: response.data.generatedScript || response.data.response,
         timestamp: new Date().toISOString(),
-        codeType: selectedScript
+        codeType: response.data.generatedScript ? true : false
       };
 
       setMessages((prev) => [...prev, botMessage]);
@@ -294,8 +250,9 @@ const ChatWindow = () => {
 
   const handleTryNow = async (code) => {
     try {
+      console.log('Running code:', code);
       setRunningCode(code);
-      const response = await axios.post('http://localhost:5000/run-code', { code });
+      const response = await axios.post('http://localhost:5001/run-code', { code });
       
       // Create a new message with the code execution result
       const executionResultMessage = {
@@ -363,7 +320,7 @@ const ChatWindow = () => {
               letterSpacing: '0.5px'
             }}
           >
-            AutoPilot AI
+            Browserwrite AI
           </Typography>
         </Toolbar>
       </AppBar>
@@ -539,6 +496,17 @@ const ChatWindow = () => {
             }}
           />
 
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={generatePlaywrightScript}
+                onChange={(e) => setGeneratePlaywrightScript(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="Generate Playwright Script"
+            sx={{ mb: 2 }}
+          />
           
         </Box>
       </Drawer>
@@ -659,7 +627,7 @@ const ChatWindow = () => {
                             {message.codeType && (
                               <Button
                                 size="small"
-                                onClick={() => setRunningCode(message)}
+                                onClick={() => handleTryNow(message.content)}
                                 startIcon={<PlayCircleIcon />}
                                 sx={{ 
                                   color: colors.success,
